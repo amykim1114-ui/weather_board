@@ -1,8 +1,8 @@
 // app.js – 화면 동작 (목록 그리기, 일정 추가)
 
-let baseTasks = [];
 let tasks = [];
 let weatherByRegion = {};   // 03 단원에서 지역별 날씨를 넣음
+let database = null;
 
 function showTodayDate() {
   const today = new Date();
@@ -12,31 +12,33 @@ function showTodayDate() {
   document.getElementById('todayDate').textContent = `${year}-${month}-${day}`;
 }
 
-function loadAddedTasks() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('wx_added') || '[]');
-    return Array.isArray(saved) ? saved : [];
-  } catch (error) {
-    return [];
+function getDatabase() {
+  if (!SUPABASE_URL || !SUPABASE_PUBLIC_KEY) {
+    throw new Error('Supabase 연결 정보가 없습니다.');
   }
+  if (typeof supabase === 'undefined') {
+    throw new Error('Supabase 스크립트를 불러오지 못했습니다.');
+  }
+  if (!database) database = supabase.createClient(SUPABASE_URL, SUPABASE_PUBLIC_KEY);
+  return database;
 }
 
 async function loadTasks() {
   const dataMessage = document.getElementById('dataMessage');
   try {
-    const response = await fetch('data/tasks.json', { cache: 'no-store' });
-    if (!response.ok) throw new Error(`일정 파일 오류: ${response.status}`);
-    const loaded = await response.json();
-    if (!Array.isArray(loaded)) throw new Error('일정 파일 형식이 올바르지 않습니다.');
-    baseTasks = loaded;
+    const { data, error } = await getDatabase()
+      .from('wx_tasks')
+      .select('id, title, region, kind, owner')
+      .order('id', { ascending: true });
+    if (error) throw error;
+    tasks = data || [];
     dataMessage.textContent = '';
     dataMessage.hidden = true;
   } catch (error) {
-    baseTasks = [];
-    dataMessage.textContent = '배포 주소로 열어주세요';
+    tasks = [];
+    dataMessage.textContent = '일정 목록을 불러오지 못했습니다. config.js와 Supabase 설정을 확인해 주세요.';
     dataMessage.hidden = false;
   }
-  tasks = baseTasks.concat(loadAddedTasks());
   renderTasks();
 }
 
@@ -97,8 +99,9 @@ function renderTasks() {
   }
 }
 
-function addTask(e) {
+async function addTask(e) {
   e.preventDefault();
+  const msgBox = document.getElementById('msgBox');
   const t = {
     title: document.getElementById('titleInput').value.trim(),
     region: document.getElementById('regionInput').value,
@@ -106,12 +109,21 @@ function addTask(e) {
     owner: document.getElementById('ownerInput').value.trim(),
   };
   if (!t.title || !t.owner) return;
-  const saved = loadAddedTasks();
-  saved.push(t);
-  localStorage.setItem('wx_added', JSON.stringify(saved));
-  e.target.reset();
-  tasks = baseTasks.concat(saved);
-  renderTasks();
+  msgBox.textContent = '';
+
+  try {
+    const { data, error } = await getDatabase()
+      .from('wx_tasks')
+      .insert(t)
+      .select('id, title, region, kind, owner')
+      .single();
+    if (error) throw error;
+    tasks.push(data);
+    e.target.reset();
+    renderTasks();
+  } catch (error) {
+    msgBox.textContent = '일정을 저장하지 못했습니다. Supabase 설정을 확인해 주세요.';
+  }
 }
 
 document.getElementById('taskForm').addEventListener('submit', addTask);

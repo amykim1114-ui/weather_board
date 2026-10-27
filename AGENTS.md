@@ -15,7 +15,9 @@
 - style.css  : 디자인
 - logic.js   : 판단 규칙만 (화면을 다루는 코드 금지)
 - app.js     : 화면 동작 (목록 그리기, 일정 추가)
-- data/tasks.json : 기본 일정 (가상 데이터)
+- data/tasks.json : 이전 단원의 기본 일정 (F-05 자료)
+- config.js : Supabase 주소 · 공개용 키
+- setup.sql : Supabase 표 · 값 규칙 · 접근 정책
 - PRD.md · AGENTS.md · CLAUDE.md · README.md : 문서
 
 ## 작업 방식
@@ -25,6 +27,7 @@
 
 ## 보안 · 데이터 규칙
 - 가상 데이터만 사용한다. 실제 이름 · 연락처 · 기관 내부 자료를 넣지 않는다.
-- 기본 일정은 data/tasks.json에서 먼저 읽고, 화면에서 추가한 일정만 브라우저 저장소에 저장한다.
+- 일정 목록은 Supabase 표 wx_tasks에서 읽고, 화면에서 추가한 일정도 같은 표에 저장한다.
+- config.js에는 Supabase 주소와 공개용 키만 둔다.
+- 비밀 키와 service_role 키는 코드 · 채팅 · GitHub에 절대 넣지 않는다.
 - 사용자가 입력한 글자는 textContent 로 표시한다.
-- 비밀 키는 코드 · 채팅 · GitHub 에 넣지 않는다.
