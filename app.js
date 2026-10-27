@@ -30,6 +30,39 @@ function weatherText(w) {
   return w ? w.tempMax + '℃ · ' + w.windMax + 'm/s · ' + w.rainProb + '%' : '-';
 }
 
+async function loadWeather() {
+  const weatherBox = document.getElementById('weatherBox');
+  const regions = Object.keys(REGION_COORDS);
+  const testMode = new URLSearchParams(window.location.search).get('test');
+  weatherBox.textContent = '오늘 날씨를 불러오는 중...';
+
+  const results = await Promise.allSettled(regions.map(async (region) => {
+    const response = await fetch(buildWeatherUrl(region));
+    if (!response.ok) throw new Error(`날씨 API 오류: ${response.status}`);
+    const data = await response.json();
+    const weather = applyTestMode(parseWeatherResponse(data), testMode);
+    return { region, weather };
+  }));
+
+  let successCount = 0;
+  for (const result of results) {
+    if (result.status !== 'fulfilled') continue;
+    weatherByRegion[result.value.region] = result.value.weather;
+    successCount += 1;
+  }
+  renderTasks();
+
+  if (successCount === regions.length) {
+    weatherBox.textContent = testMode === 'wind'
+      ? '오늘 날씨를 불러왔습니다. (풍속 시험 모드: 12m/s)'
+      : '오늘 날씨를 불러왔습니다.';
+  } else if (successCount > 0) {
+    weatherBox.textContent = `일부 지역의 날씨만 불러왔습니다. (${successCount}/${regions.length})`;
+  } else {
+    weatherBox.textContent = '날씨를 불러오지 못했습니다. 일정 목록은 계속 확인할 수 있습니다.';
+  }
+}
+
 function renderTasks() {
   const body = document.getElementById('taskList');
   body.innerHTML = '';
@@ -71,3 +104,4 @@ document.getElementById('taskForm').addEventListener('submit', addTask);
 showTodayDate();
 loadTasks();
 renderTasks();
+loadWeather();
