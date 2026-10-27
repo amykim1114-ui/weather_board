@@ -12,6 +12,12 @@ header h1 {
     color: #2f6b22;
 }
 
+.today-date {
+    margin: 4px 0;
+    color: #444;
+    font-weight: bold;
+}
+
 .sub {
     margin: 4px 0 16px;
     color: #666;
